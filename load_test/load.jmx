@@ -9,9 +9,9 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="APP_URL" elementType="Argument">
             <stringProp name="Argument.name">APP_URL</stringProp>
-            <stringProp name="Argument.value">${__GetSecret(app-url)}</stringProp>
+            <stringProp name="Argument.value">${__BeanShell(System.getenv("APP_URL"))}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">SimpleChat application URL from Key Vault</stringProp>
+            <stringProp name="Argument.desc">SimpleChat application domain name from environment variable (without https://)</stringProp>
           </elementProp>
           <elementProp name="AZURE_ENVIRONMENT" elementType="Argument">
             <stringProp name="Argument.name">AZURE_ENVIRONMENT</stringProp>
@@ -21,22 +21,17 @@
           </elementProp>
           <elementProp name="TENANT_ID" elementType="Argument">
             <stringProp name="Argument.name">TENANT_ID</stringProp>
-            <stringProp name="Argument.value">${__GetSecret(tenant-id)}</stringProp>
+            <stringProp name="Argument.value">${__BeanShell(System.getenv("TENANT_ID"))}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">Azure AD Tenant ID from Key Vault</stringProp>
+            <stringProp name="Argument.desc">Azure AD Tenant ID from environment variable</stringProp>
           </elementProp>
           <elementProp name="CLIENT_ID" elementType="Argument">
             <stringProp name="Argument.name">CLIENT_ID</stringProp>
-            <stringProp name="Argument.value">${__GetSecret(client-id)}</stringProp>
+            <stringProp name="Argument.value">${__BeanShell(System.getenv("CLIENT_ID"))}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">App Registration Client ID from Key Vault</stringProp>
+            <stringProp name="Argument.desc">App Registration Client ID from environment variable</stringProp>
           </elementProp>
-          <elementProp name="KEY_VAULT_NAME" elementType="Argument">
-            <stringProp name="Argument.name">KEY_VAULT_NAME</stringProp>
-            <stringProp name="Argument.value">${__BeanShell(System.getenv("KEY_VAULT_NAME"))}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">Azure Key Vault name from environment variable (needed to configure GetSecret)</stringProp>
-          </elementProp>
+
           <elementProp name="MODEL_DEPLOYMENT_NAME" elementType="Argument">
             <stringProp name="Argument.name">MODEL_DEPLOYMENT_NAME</stringProp>
             <stringProp name="Argument.value">${__BeanShell(System.getenv("MODEL_DEPLOYMENT_NAME") != null ? System.getenv("MODEL_DEPLOYMENT_NAME") : "gpt-4o")}</stringProp>
@@ -63,9 +58,9 @@
           </elementProp>
           <elementProp name="CLIENT_SECRET" elementType="Argument">
             <stringProp name="Argument.name">CLIENT_SECRET</stringProp>
-            <stringProp name="Argument.value">${__GetSecret(client-secret)}</stringProp>
+            <stringProp name="Argument.value">${__BeanShell(System.getenv("CLIENT_SECRET"))}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
-            <stringProp name="Argument.desc">App Registration Client Secret from Key Vault</stringProp>
+            <stringProp name="Argument.desc">App Registration Client Secret from environment variable</stringProp>
           </elementProp>
         </collectionProp>
       </elementProp>
@@ -106,32 +101,7 @@ log.info("Configured for Azure environment: " + azureEnv);
       </BeanShellPreProcessor>
       <hashTree/>
 
-      <!-- Key Vault Configuration for JMeter GetSecret Function -->
-      <BeanShellPreProcessor guiclass="TestBeanGUI" testclass="BeanShellPreProcessor" testname="Configure Key Vault for GetSecret" enabled="true">
-        <stringProp name="BeanShellPreProcessor.query">
-// Configure Key Vault settings for JMeter's built-in GetSecret function
-// This sets up the necessary variables for ${__GetSecret()} to work properly
 
-String azureEnv = vars.get("AZURE_ENVIRONMENT").toLowerCase();
-String keyVaultName = vars.get("KEY_VAULT_NAME");
-String vaultSuffix = vars.get("VAULT_SUFFIX");
-
-// Set Key Vault URL for GetSecret function
-String keyVaultUrl = "https://" + keyVaultName + vaultSuffix;
-System.setProperty("azure.keyvault.url", keyVaultUrl);
-
-// Configure authentication method (managed identity preferred)
-System.setProperty("azure.keyvault.auth.method", "managedidentity");
-
-log.info("Configured Key Vault URL: " + keyVaultUrl);
-log.info("Authentication method: Managed Identity");
-log.info("Ready to use ${__GetSecret()} function");
-        </stringProp>
-        <stringProp name="BeanShellPreProcessor.filename"></stringProp>
-        <stringProp name="BeanShellPreProcessor.parameters"></stringProp>
-        <boolProp name="BeanShellPreProcessor.resetInterpreter">false</boolProp>
-      </BeanShellPreProcessor>
-      <hashTree/>
 
       <!-- Cookie Manager for session handling -->
       <CookieManager guiclass="CookiePanel" testclass="CookieManager" testname="HTTP Cookie Manager" enabled="true">
@@ -235,13 +205,15 @@ log.info("Ready to use ${__GetSecret()} function");
             <stringProp name="HTTPSampler.response_timeout"></stringProp>
           </HTTPSamplerProxy>
           <hashTree>
-            <!-- Extract Access Token -->
-            <JSONExtractor guiclass="JSONExtractorGui" testclass="JSONExtractor" testname="Extract Access Token" enabled="true">
-              <stringProp name="JSONExtractor.referenceNames">access_token</stringProp>
-              <stringProp name="JSONExtractor.jsonPathExpressions">$.access_token</stringProp>
-              <stringProp name="JSONExtractor.match_numbers">1</stringProp>
-              <stringProp name="JSONExtractor.defaultValues">NOT_FOUND</stringProp>
-            </JSONExtractor>
+            <!-- Extract Access Token using RegEx Extractor -->
+            <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Extract Access Token" enabled="true">
+              <stringProp name="RegexExtractor.useHeaders">false</stringProp>
+              <stringProp name="RegexExtractor.refname">access_token</stringProp>
+              <stringProp name="RegexExtractor.regex">"access_token":"([^"]*)"</stringProp>
+              <stringProp name="RegexExtractor.template">$1$</stringProp>
+              <stringProp name="RegexExtractor.default">NOT_FOUND</stringProp>
+              <stringProp name="RegexExtractor.match_number">1</stringProp>
+            </RegexExtractor>
             <hashTree/>
           </hashTree>
 
@@ -396,15 +368,6 @@ log.info("Ready to use ${__GetSecret()} function");
           </ResponseAssertion>
           <hashTree/>
 
-          <!-- Extract AI Response -->
-          <JSONExtractor guiclass="JSONExtractorGui" testclass="JSONExtractor" testname="Extract AI Response" enabled="true">
-            <stringProp name="JSONExtractor.referenceNames">ai_response</stringProp>
-            <stringProp name="JSONExtractor.jsonPathExpressions">$.response</stringProp>
-            <stringProp name="JSONExtractor.match_numbers">1</stringProp>
-            <stringProp name="JSONExtractor.defaultValues">NO_RESPONSE</stringProp>
-          </JSONExtractor>
-          <hashTree/>
-
           <!-- Duration Assertion -->
           <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion" testname="Response Time Assert" enabled="true">
             <stringProp name="DurationAssertion.duration">30000</stringProp>
@@ -475,7 +438,7 @@ log.info("Ready to use ${__GetSecret()} function");
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
                 <stringProp name="Argument.value">{
   "message": "Can you elaborate on the third point you mentioned?",
-  "conversation_id": "${conversation_id}",
+  "conversation_id": "${__UUID()}",
   "model_deployment": "${MODEL_DEPLOYMENT_NAME}",
   "hybrid_search": false,
   "image_generation": false,

@@ -24,22 +24,15 @@ This JMeter load test is designed to test the SimpleChat application's Azure Ope
 
 ### Required Configuration
 
-#### Key Vault Secrets (Secure Configuration)
-Store these **sensitive values** as secrets in your Azure Key Vault:
-
-| Secret Name | Value | Description |
-|-------------|-------|-------------|
-| `app-url` | `your-app.azurewebsites.net` | SimpleChat app URL (without https://) |
-| `tenant-id` | `your-tenant-guid` | Azure AD tenant ID |
-| `client-id` | `your-client-guid` | App registration client ID |
-| `client-secret` | `your-client-secret` | App registration client secret |
-
-#### Application Settings (Non-Sensitive Configuration)
+#### Application Settings Configuration
 Configure these as **Application Settings** in your Azure Load Testing resource:
 
 | Name | Value | Notes |
 |------|-------|-------|
-| `KEY_VAULT_NAME` | `your-keyvault` | Key Vault name (without .vault.azure.net) |
+| `APP_URL` | `your-app.azurewebsites.net` | SimpleChat app domain (without https://) |
+| `TENANT_ID` | `your-tenant-guid` | Azure AD tenant ID |
+| `CLIENT_ID` | `your-client-guid` | App registration client ID |
+| `CLIENT_SECRET` | `your-client-secret` | App registration client secret |
 | `AZURE_ENVIRONMENT` | `public` or `usgovernment` | Optional, defaults to public |
 | `MODEL_DEPLOYMENT_NAME` | `gpt-4o` | Optional, defaults to gpt-4o |
 | `THREADS` | `25` | Optional, defaults to 10 |
