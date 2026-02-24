@@ -1,0 +1,751 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "U.S. Treasury Fiscal Data API - Core Endpoints",
+    "description": "Essential U.S. Treasury API endpoints for the most common financial data queries.\nThis focused API includes key endpoints for debt, revenue, spending, auctions, and interest rates.\n\n## Features\n- RESTful API accepting GET requests\n- Returns JSON responses by default\n- Supports CSV and XML formats\n- Standard HTTP response codes\n- No authentication required\n- Rate limiting applied\n\n## API Endpoint URL Structure\n**Base URL:** `https://api.fiscaldata.treasury.gov/services/api/fiscal_service/`\n\n**Full Request Format:** Base URL + Endpoint + Parameters (optional)\n\n**Example:** `https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny?fields=record_date,tot_pub_debt_out_amt&sort=-record_date&page[size]=10`",
+    "version": "1.0.0",
+    "contact": {
+      "name": "U.S. Treasury Fiscal Service",
+      "url": "https://fiscaldata.treasury.gov"
+    },
+    "license": {
+      "name": "Public Domain",
+      "url": "https://fiscaldata.treasury.gov"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.fiscaldata.treasury.gov/services/api/fiscal_service",
+      "description": "Production server"
+    }
+  ],
+  "security": [],
+  "components": {
+    "parameters": {
+      "fields": {
+        "name": "fields",
+        "in": "query",
+        "description": "Comma-separated list of field names to include in the response. \nUse this to get only the data fields you need.\nNote: Omitting fields can result in automatically aggregated and summed data results.",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "record_date,tot_pub_debt_out_amt,debt_held_public_amt"
+      },
+      "filter": {
+        "name": "filter",
+        "in": "query",
+        "description": "Filter to view a subset of data based on specific criteria.\nFormat: field_name:operator:value\nOperators: eq (equals), lt (less than), lte (less than or equal), gt (greater than), gte (greater than or equal), in (in list)\nMultiple filters: Use comma separation for AND logic\n**Date Format:** YYYY-MM-DD",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "record_date:gte:2020-01-01"
+      },
+      "sort": {
+        "name": "sort",
+        "in": "query",
+        "description": "Sort field(s) in ascending or descending order.\nUse minus (-) prefix for descending order.\nSupports nested sorting with comma-separated field names.",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "-record_date"
+      },
+      "format": {
+        "name": "format",
+        "in": "query",
+        "description": "Output format for the response",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": ["json", "csv", "xml"],
+          "default": "json"
+        },
+        "example": "json"
+      },
+      "pageNumber": {
+        "name": "page[number]",
+        "in": "query",
+        "description": "Page number for pagination (starts at 1)",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 999999,
+          "default": 1
+        },
+        "example": 1
+      },
+      "pageSize": {
+        "name": "page[size]",
+        "in": "query",
+        "description": "Number of records per page",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 100
+        },
+        "example": 100
+      }
+    },
+    "schemas": {
+      "MetaObject": {
+        "type": "object",
+        "description": "Metadata about the API response",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "description": "Number of records returned in this response"
+          },
+          "dataTypes": {
+            "type": "object",
+            "description": "Data types for each field"
+          },
+          "dataFormats": {
+            "type": "object",
+            "description": "Format specifications for each field"
+          },
+          "total-count": {
+            "type": "integer",
+            "description": "Total number of records available"
+          },
+          "total-pages": {
+            "type": "integer",
+            "description": "Total number of pages available"
+          }
+        },
+        "example": {
+          "count": 12,
+          "dataTypes": {
+            "record_date": "DATE",
+            "tot_pub_debt_out_amt": "NUMBER"
+          },
+          "dataFormats": {
+            "record_date": "YYYY-MM-DD",
+            "tot_pub_debt_out_amt": "$10,000"
+          },
+          "total-count": 1250,
+          "total-pages": 1
+        }
+      },
+      "LinksObject": {
+        "type": "object",
+        "description": "Pagination links for navigating through pages",
+        "properties": {
+          "self": {
+            "type": "string",
+            "description": "Link to current page"
+          },
+          "first": {
+            "type": "string",
+            "description": "Link to first page"
+          },
+          "prev": {
+            "type": "string",
+            "description": "Link to previous page (if applicable)"
+          },
+          "next": {
+            "type": "string",
+            "description": "Link to next page (if applicable)"
+          },
+          "last": {
+            "type": "string",
+            "description": "Link to last page"
+          }
+        },
+        "example": {
+          "self": "&page%5Bnumber%5D=1&page%5Bsize%5D=100",
+          "first": "&page%5Bnumber%5D=1&page%5Bsize%5D=100",
+          "next": "&page%5Bnumber%5D=2&page%5Bsize%5D=100",
+          "last": "&page%5Bnumber%5D=1&page%5Bsize%5D=100"
+        }
+      },
+      "ApiResponse": {
+        "type": "object",
+        "description": "Standard API response structure",
+        "properties": {
+          "data": {
+            "type": "array",
+            "description": "Array of data records",
+            "items": {
+              "type": "object"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaObject"
+          },
+          "links": {
+            "$ref": "#/components/schemas/LinksObject"
+          }
+        },
+        "required": ["data", "meta", "links"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Error response structure",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error type"
+          },
+          "message": {
+            "type": "string",
+            "description": "Detailed error message"
+          }
+        },
+        "required": ["error", "message"],
+        "example": {
+          "error": "Invalid Query Param",
+          "message": "Invalid query parameter 'sorts' with value '[-record_date]'. For more information please see the documentation."
+        }
+      }
+    },
+    "responses": {
+      "Success": {
+        "description": "Successful response",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiResponse"
+            }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Bad Request - Request was malformed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Not Found - When a non-existent resource is requested",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "MethodNotAllowed": {
+        "description": "Method Not Allowed - Only GET requests are supported",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "TooManyRequests": {
+        "description": "Too Many Requests - Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error - The server failed to fulfill the request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/v2/accounting/od/debt_to_penny": {
+      "get": {
+        "tags": ["Public Debt"],
+        "summary": "Daily Public Debt Outstanding",
+        "description": "Outstanding U.S. debt on a daily basis. This is the most current and comprehensive debt data available.\n\n**Key Fields:** record_date, debt_held_public_amt, intragov_hold_amt, tot_pub_debt_out_amt\n\n**Example:** filter=record_date:gte:2025-01-01&fields=record_date,tot_pub_debt_out_amt,debt_held_public_amt",
+        "operationId": "getDebtToPenny",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v2/accounting/od/debt_outstanding": {
+      "get": {
+        "tags": ["Public Debt"],
+        "summary": "Historical Debt Outstanding",
+        "description": "U.S. debt outstanding at the end of each fiscal year for historical analysis.\n\n**Key Fields:** record_date, debt_outstanding_amt\n\n**Example:** filter=record_date:gte:2020-01-01&fields=record_date,debt_outstanding_amt",
+        "operationId": "getHistoricalDebtOutstanding",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v2/accounting/od/interest_expense": {
+      "get": {
+        "tags": ["Public Debt"],
+        "summary": "Interest Expense on Public Debt",
+        "description": "Monthly summary of the cost of interest on U.S. debt, including Treasury notes, bonds, and other securities.\n\n**Key Fields:** record_date, expense_catg_desc, expense_group_desc, expense_type_desc, month_expense_amt, fytd_expense_amt\n\n**Example:** filter=record_date:gte:2025-01-01&fields=record_date,expense_type_desc,month_expense_amt",
+        "operationId": "getInterestExpense",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/debt/mspd/mspd_table_1": {
+      "get": {
+        "tags": ["Public Debt"],
+        "summary": "Summary of Treasury Securities Outstanding",
+        "description": "Summarizes amounts outstanding for all securities issued by the Bureau of the Fiscal Service.\n\n**Key Fields:** record_date, security_type_desc, security_class_desc, debt_held_public_mil_amt, intragov_hold_mil_amt, total_mil_amt\n\n**Example:** filter=record_date:gte:2025-01-01&fields=record_date,security_type_desc,total_mil_amt",
+        "operationId": "getTreasurySecuritiesOutstandingSummary",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v2/revenue/rcm": {
+      "get": {
+        "tags": ["Government Revenue"],
+        "summary": "Daily Government Revenue Collections",
+        "description": "Daily overview of federal revenue collections including income taxes, customs duties, fees, and other revenue sources.\n\n**Key Fields:** record_date, net_collections_amt, tax_category_desc, channel_type_desc, electronic_category_desc\n\n**Example:** filter=record_date:gte:2025-04-01&fields=record_date,net_collections_amt,tax_category_desc",
+        "operationId": "getDailyRevenueCollections",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/mts/mts_table_1": {
+      "get": {
+        "tags": ["Government Revenue"],
+        "summary": "Monthly Receipts, Outlays, and Deficit/Surplus",
+        "description": "Monthly summary of total receipts, outlays, and budget surplus/deficit for current and prior fiscal years.\n\n**Key Fields:** record_date, classification_desc, current_month_gross_rcpt_amt, current_month_gross_outly_amt, current_month_dfct_sur_amt\n\n**Example:** filter=record_date:gte:2025-01-01&fields=record_date,classification_desc,current_month_gross_rcpt_amt",
+        "operationId": "getMonthlyBudgetSummary",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/dts/operating_cash_balance": {
+      "get": {
+        "tags": ["Cash Flow"],
+        "summary": "Daily Treasury Operating Cash Balance",
+        "description": "Daily Treasury General Account balance showing the government's available cash.\n\n**Key Fields:** record_date, account_type, close_today_bal, open_today_bal, open_month_bal, open_fiscal_year_bal\n\n**Example:** filter=record_date:gte:2025-01-01&fields=record_date,account_type,close_today_bal",
+        "operationId": "getDailyOperatingCashBalance",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/dts/deposits_withdrawals_operating_cash": {
+      "get": {
+        "tags": ["Cash Flow"],
+        "summary": "Daily Deposits and Withdrawals",
+        "description": "Daily deposits and withdrawals from the Treasury General Account showing government cash flows.\n\n**Key Fields:** record_date, transaction_catg_desc, transaction_today_amt, transaction_mtd_amt, transaction_fytd_amt\n\n**Example:** filter=record_date:gte:2025-01-01&fields=record_date,transaction_catg_desc,transaction_today_amt",
+        "operationId": "getDailyDepositsWithdrawals",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/od/auctions_query": {
+      "get": {
+        "tags": ["Treasury Securities"],
+        "summary": "Treasury Securities Auction Data",
+        "description": "Data on announced and auctioned marketable Treasury securities including rates, yields, and auction results.\n\n**Key Fields:** record_date, cusip, security_type, security_term, auction_date, issue_date, maturity_date, avg_med_yield\n\n**Example:** filter=auction_date:gte:2025-01-01&fields=cusip,security_type,auction_date,avg_med_yield",
+        "operationId": "getTreasuryAuctionData",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/od/upcoming_auctions": {
+      "get": {
+        "tags": ["Treasury Securities"],
+        "summary": "Upcoming Treasury Auctions",
+        "description": "Information about upcoming auctions on marketable Treasury securities including announcement and auction dates.\n\n**Key Fields:** record_date, security_type, security_term, cusip, offering_amt, announcemt_date, auction_date, issue_date\n\n**Example:** filter=auction_date:gte:2025-01-01&fields=security_type,cusip,auction_date,offering_amt",
+        "operationId": "getUpcomingTreasuryAuctions",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v2/accounting/od/avg_interest_rates": {
+      "get": {
+        "tags": ["Interest Rates"],
+        "summary": "Average Interest Rates on Treasury Securities",
+        "description": "Average interest rates for marketable and non-marketable Treasury securities.\n\n**Key Fields:** record_date, security_type_desc, security_desc, avg_interest_rate_amt\n\n**Example:** filter=record_date:gte:2025-01-01&fields=record_date,security_type_desc,avg_interest_rate_amt",
+        "operationId": "getAverageInterestRates",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/od/rates_of_exchange": {
+      "get": {
+        "tags": ["Exchange Rates"],
+        "summary": "Treasury Reporting Rates of Exchange",
+        "description": "Foreign currency exchange rates for Treasury reporting purposes, updated quarterly.\n\n**Key Fields:** record_date, country, currency, country_currency_desc, exchange_rate, effective_date\n\n**Example:** filter=record_date:gte:2025-01-01&fields=country,currency,exchange_rate",
+        "operationId": "getTreasuryExchangeRates",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/debt/mspd/mspd_table_3_market": {
+      "get": {
+        "tags": ["Treasury Securities"],
+        "summary": "Marketable Treasury Securities Outstanding Details",
+        "description": "Detailed information by CUSIP on outstanding marketable Treasury securities including Bills, Notes, Bonds, and TIPS.\n\n**Key Fields:** record_date, security_type_desc, security_class1_desc, series_cd, interest_rate_pct, yield_pct, issue_date, maturity_date, outstanding_amt\n\n**Example:** filter=record_date:gte:2025-01-01&fields=security_type_desc,maturity_date,outstanding_amt",
+        "operationId": "getMarketableSecuritiesDetails",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/od/frn_daily_indexes": {
+      "get": {
+        "tags": ["Interest Rates"],
+        "summary": "Floating Rate Notes Daily Indexes",
+        "description": "Daily index rates and interest accrual information for Treasury Floating Rate Notes (FRNs).\n\n**Key Fields:** record_date, cusip, maturity_date, spread, daily_index, daily_int_accrual_rate\n\n**Example:** filter=record_date:gte:2025-01-01&fields=cusip,daily_index,daily_int_accrual_rate",
+        "operationId": "getFRNDailyIndexes",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/dts/federal_tax_deposits": {
+      "get": {
+        "tags": ["Tax Collections"],
+        "summary": "Daily Federal Tax Deposits",
+        "description": "Daily breakdown of federal tax deposits by type showing government tax revenue collection patterns.\n\n**Key Fields:** record_date, tax_deposit_today_amt, tax_deposit_mtd_amt, tax_deposit_fytd_amt, tax_deposit_type, tax_deposit_type_desc\n\n**Example:** filter=record_date:gte:2025-04-01&fields=record_date,tax_deposit_today_amt,tax_deposit_mtd_amt,tax_deposit_type",
+        "operationId": "getDailyFederalTaxDeposits",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/dts/income_tax_refunds_issued": {
+      "get": {
+        "tags": ["Tax Collections"],
+        "summary": "Daily Income Tax Refunds Issued",
+        "description": "Daily breakdown of tax refunds by recipient type and payment method.\n\n**Key Fields:** record_date, tax_refund_today_amt, tax_refund_mtd_amt, tax_refund_fytd_amt, tax_refund_type, tax_refund_type_desc\n\n**Example:** filter=record_date:gte:2025-04-01&fields=record_date,tax_refund_today_amt,tax_refund_mtd_amt,tax_refund_type",
+        "operationId": "getDailyIncomeTaxRefunds",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/od/i_bonds_interest_rates": {
+      "get": {
+        "tags": ["Savings Bonds"],
+        "summary": "I Bonds Interest Rates",
+        "description": "Interest rates for Series I savings bonds including fixed rates, inflation rates, and composite rates.\n\n**Key Fields:** earning_period, earning_period_start, earning_period_end, issue_year_month, fixed_rate, semi_annual_inflation_rate, combined_rate\n\n**Example:** filter=earning_period_start:gte:2025-01-01&fields=earning_period,fixed_rate,combined_rate",
+        "operationId": "getIBondsInterestRates",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v2/accounting/od/redemption_tables": {
+      "get": {
+        "tags": ["Savings Bonds"],
+        "summary": "Savings Bonds Redemption Tables",
+        "description": "Monthly redemption values, interest earned, and yields for accrual savings bonds.\n\n**Key Fields:** redemp_period, issue_name, issue_year, issue_months, redemp_value_100_amt, int_earned_100_amt\n\n**Example:** filter=redemp_period:gte:2025-01&fields=issue_name,redemp_period,redemp_value_100_amt",
+        "operationId": "getSavingsBondsRedemptionTables",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v2/accounting/od/utf_qtr_yields": {
+      "get": {
+        "tags": ["Trust Funds"],
+        "summary": "Unemployment Trust Fund Quarterly Yields",
+        "description": "Quarterly yields earned from Unemployment Trust Funds from 1999 to present.\n\n**Key Fields:** record_date, quarter_desc, yield_pct\n\n**Example:** filter=record_date:gte:2025-01-01&fields=record_date,quarter_desc,yield_pct",
+        "operationId": "getUnemploymentTrustFundYields",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    },
+    "/v1/accounting/od/highway_trust_fund": {
+      "get": {
+        "tags": ["Trust Funds"],
+        "summary": "Highway Trust Fund Financial Data",
+        "description": "Financial data for the Highway Trust Fund including receipts, expenditures, and fund balance.\n\n**Key Fields:** record_date, fiscal_year, account_desc, component_desc, fiscal_year_expected_bil_amt\n\n**Example:** filter=record_date:gte:2025-01-01&fields=account_desc,component_desc,fiscal_year_expected_bil_amt",
+        "operationId": "getHighwayTrustFundData",
+        "parameters": [
+          {"$ref": "#/components/parameters/fields"},
+          {"$ref": "#/components/parameters/filter"},
+          {"$ref": "#/components/parameters/sort"},
+          {"$ref": "#/components/parameters/format"},
+          {"$ref": "#/components/parameters/pageNumber"},
+          {"$ref": "#/components/parameters/pageSize"}
+        ],
+        "responses": {
+          "200": {"$ref": "#/components/responses/Success"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "405": {"$ref": "#/components/responses/MethodNotAllowed"},
+          "429": {"$ref": "#/components/responses/TooManyRequests"},
+          "500": {"$ref": "#/components/responses/InternalServerError"}
+        }
+      }
+    }
+  }
+}
